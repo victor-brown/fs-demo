@@ -1,39 +1,37 @@
 import { Logger } from "../Logger/Logger";
 import { type IFileSystem } from "./IFileSytem";
 import md5 from "md5";
+import fs from "fs-extra";
 
 export class FS implements IFileSystem {
-  private readonly contentMap: Map<string, string>;
   private readonly fileToContentMap: Map<string, string>;
+  private readonly dataDirectory: string;
+
   private readonly logger = new Logger(FS.name);
 
-  constructor() {
-    this.contentMap = new Map();
+  constructor(dataDirectoryPath: string) {
     this.fileToContentMap = new Map();
+    this.dataDirectory = dataDirectoryPath;
   }
 
   log(): void {
-    this.logger.log("contentMap:");
-    this.logger.logMap(this.contentMap);
-
-    console.log("");
-
     this.logger.log("fileToContentMap:");
     this.logger.logMap(this.fileToContentMap);
   }
 
   store(filename: string, content: string): void {
     const hashedContent = this.getHashedContent(content);
+    const filePath = this.getFilePath(hashedContent);
 
-    if (!this.contentMap.has(hashedContent)) {
-      this.contentMap.set(hashedContent, content);
-      this.logger.log(`"${content}", has been saved as: "${hashedContent}"`);
+    if (!fs.existsSync(filePath)) {
+      fs.outputFileSync(filePath, content);
+      this.logger.log(`"${content}", has been saved to: "${filePath}"`);
     } else {
-      this.logger.log(`"${content}", already exists as: "${hashedContent}"`);
+      this.logger.log(`"${content}", already exists as: "${filePath}"`);
     }
 
     this.fileToContentMap.set(filename, hashedContent);
-    this.logger.log(`"${filename}", has been assigned to: "${hashedContent}"`);
+    this.logger.log(`"${filename}", has been assigned to: "${filePath}"`);
   }
 
   get(filename: string): string {
@@ -42,19 +40,23 @@ export class FS implements IFileSystem {
     }
 
     const hashedContent = this.fileToContentMap.get(filename) as string;
-    this.logger.log(
-      `Successfully found "${hashedContent}" key for "${filename}"`,
-    );
+    const filePath = this.getFilePath(hashedContent);
 
-    if (!this.contentMap.has(hashedContent)) {
+    this.logger.log(`Successfully found "${filePath}" for "${filename}"`);
+
+    if (!fs.existsSync(filePath)) {
       throw new Error(
-        `Could not found content for "${filename}" with "${hashedContent}" key`,
+        `Could not load content for "${filename}" on "${filePath}" path`,
       );
     }
-    return this.contentMap.get(hashedContent) as string;
+    return fs.readFileSync(filePath, "utf8");
   }
 
   private getHashedContent(content: string): string {
     return md5(content);
+  }
+
+  private getFilePath(filename: string): string {
+    return `${this.dataDirectory}/${filename}.txt`;
   }
 }

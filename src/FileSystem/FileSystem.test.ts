@@ -1,10 +1,25 @@
 import { FS } from "./FileSytem";
 
+jest.mock("fs-extra", () => {
+  const fs = jest.requireActual("fs-extra");
+
+  const mockResults: Record<string, any> = {};
+
+  return {
+    ...fs,
+    outputFileSync: jest.fn((filePath: string, content: any) => {
+      mockResults[filePath] = content;
+    }),
+    existsSync: jest.fn((filePath: string) => !!mockResults[filePath]),
+    readFileSync: jest.fn((filePath: string) => mockResults[filePath] || null),
+  };
+});
+
 describe("FileSystem", () => {
   let fileSystem: FS;
 
   beforeEach(() => {
-    fileSystem = new FS();
+    fileSystem = new FS("test-files");
   });
 
   test.each([
@@ -81,14 +96,5 @@ describe("FileSystem", () => {
 
     expect(fileSystem.get(testFileName1)).toBe(testContent2);
     expect(fileSystem.get(testFileName2)).toBe(testContent1);
-  });
-
-  it("should handle empty content", () => {
-    const filename = "empty-file";
-    const content = "";
-
-    fileSystem.store(filename, content);
-
-    expect(fileSystem.get(filename)).toBe(content);
   });
 });

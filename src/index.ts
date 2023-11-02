@@ -1,12 +1,13 @@
 import { FS } from "./FileSystem/FileSytem";
 import { Logger } from "./Logger/Logger";
 
-const fileSystem = new FS();
+const fileSystem = new FS("saved-files");
 const logger = new Logger("Main");
 
 fileSystem.store("file1", "a very long string1");
 fileSystem.store("file2", "a very long string1");
 fileSystem.store("file3", "a very long string2");
+fileSystem.store("file4", "");
 
 console.log("\n----------------------\n");
 
